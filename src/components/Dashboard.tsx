@@ -270,7 +270,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
+      <main className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
         {/* Settings panel */}
         {showSettings && (
           <div className="p-4 rounded-lg border border-border bg-card animate-slide-up space-y-4">
@@ -419,13 +419,13 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tasks</h2>
             <div className="flex items-center gap-2 bg-secondary/50 rounded-lg px-2 py-1">
-              <Button variant="ghost" size="xs" onClick={handlePrevDay} className="h-6 w-6 p-0 hover:bg-roast/10 hover:text-roast">
+              <Button variant="ghost" size="xs" onClick={handlePrevDay} className="h-6 w-6 p-0 hover:bg-roast/10 hover:text-roast active:scale-95 touch-manipulation">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-xs font-bold font-mono text-foreground min-w-[85px] text-center">
                 {selectedDate === today ? 'TODAY' : selectedDate}
               </span>
-              <Button variant="ghost" size="xs" onClick={handleNextDay} className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success">
+              <Button variant="ghost" size="xs" onClick={handleNextDay} className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success active:scale-95 touch-manipulation">
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
