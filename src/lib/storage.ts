@@ -13,6 +13,8 @@ const defaultProfile: UserProfile = {
   streakCount: 0,
   lastCompletedDate: '',
   onboardingDone: false,
+  notificationInterval: 'off',
+  notificationTime: '09:00',
 };
 
 export function getProfile(): UserProfile {

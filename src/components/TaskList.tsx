@@ -7,6 +7,7 @@ interface TaskListProps {
   onComplete: (id: string) => void;
   onMiss: (id: string) => void;
   onDelete: (id: string) => void;
+  onReset: (id: string) => void;
 }
 
 const statusStyles = {
@@ -15,12 +16,12 @@ const statusStyles = {
   missed: 'border-roast/50 bg-roast/5',
 };
 
-const TaskList = ({ tasks, onComplete, onMiss, onDelete }: TaskListProps) => {
+const TaskList = ({ tasks, onComplete, onMiss, onDelete, onReset }: TaskListProps) => {
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p className="text-lg font-semibold">No tasks yet.</p>
-        <p className="text-sm">Add one above. Unless you're too lazy for that too.</p>
+      <div className="text-center py-8 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed border-border">
+        <p className="text-lg font-semibold">Empty, just like your ambition.</p>
+        <p className="text-sm">Add a task before we find you another bed to sleep in.</p>
       </div>
     );
   }
@@ -30,44 +31,60 @@ const TaskList = ({ tasks, onComplete, onMiss, onDelete }: TaskListProps) => {
       {tasks.map((task) => (
         <div
           key={task.id}
-          className={`flex items-center justify-between p-3 rounded-lg border animate-slide-up ${statusStyles[task.status]}`}
+          className={`group flex items-center justify-between p-4 rounded-xl border transition-all duration-300 animate-slide-up hover:shadow-lg ${statusStyles[task.status]}`}
         >
-          <span className={`flex-1 font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : task.status === 'missed' ? 'text-roast' : 'text-foreground'}`}>
-            {task.title}
-          </span>
-          {task.status === 'pending' && (
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onComplete(task.id)}
-                className="text-success hover:text-success hover:bg-success/10 h-8 w-8 p-0"
-              >
-                <Check className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onMiss(task.id)}
-                className="text-roast hover:text-roast hover:bg-roast/10 h-8 w-8 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onDelete(task.id)}
-                className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          )}
-          {task.status !== 'pending' && (
-            <span className={`text-xs font-semibold uppercase tracking-wider ${task.status === 'completed' ? 'text-success' : 'text-roast'}`}>
-              {task.status}
+          <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-4">
+            <span className={`font-semibold truncate text-sm sm:text-base ${task.status === 'completed' ? 'line-through text-muted-foreground/50' : task.status === 'missed' ? 'text-roast font-bold italic' : 'text-foreground'}`}>
+              {task.title}
             </span>
-          )}
+            {task.status !== 'pending' && (
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${task.status === 'completed' ? 'text-success/70' : 'text-roast/70'}`}>
+                {task.status}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1.5 shrink-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+            {task.status === 'pending' ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onComplete(task.id)}
+                  className="text-success hover:text-white hover:bg-success h-9 w-9 p-0 rounded-full border border-success/20"
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onMiss(task.id)}
+                  className="text-roast hover:text-white hover:bg-roast h-9 w-9 p-0 rounded-full border border-roast/20"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onReset(task.id)}
+                className="text-muted-foreground hover:text-foreground h-9 w-9 p-0 rounded-full border border-border"
+                title="Reset to Pending"
+              >
+                <Check className="w-4 h-4 rotate-180 opacity-50" />
+              </Button>
+            )}
+            
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onDelete(task.id)}
+              className="text-muted-foreground hover:text-roast hover:bg-roast/10 h-9 w-9 p-0 rounded-full border border-border"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       ))}
     </div>

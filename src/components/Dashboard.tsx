@@ -6,6 +6,7 @@ import {
   updateTaskStatus, deleteTask, getToday, calculateScore, updateStreak,
 } from '@/lib/storage';
 import { getRoast } from '@/lib/roasts';
+import { requestNotificationPermission, triggerRoastNotification } from '@/lib/notifications';
 import GoalSetup from '@/components/GoalSetup';
 import AddTask from '@/components/AddTask';
 import TaskList from '@/components/TaskList';
@@ -14,6 +15,17 @@ import StreakDisplay from '@/components/StreakDisplay';
 import ScoreDisplay from '@/components/ScoreDisplay';
 import ToneSelector from '@/components/ToneSelector';
 import ShareableRoast from '@/components/ShareableRoast';
+import { Button } from '@/components/ui/button';
+import { Bell, BellOff, Clock, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<UserProfile>(getProfile());
@@ -21,13 +33,27 @@ const Dashboard = () => {
   const [roastMessage, setRoastMessage] = useState('');
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [editGoal, setEditGoal] = useState(profile.goal);
+  const [editSalary, setEditSalary] = useState(profile.targetSalary);
+  
   const today = getToday();
+  const [selectedDate, setSelectedDate] = useState(today);
+  
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    'Notification' in window && Notification.permission === 'granted'
+  );
+  const [isPushEnabled, setIsPushEnabled] = useState(
+    localStorage.getItem('is_push_enabled') === 'true'
+  );
+  
+  const { toast } = useToast();
+
   const score = calculateScore(tasks);
 
   const refreshTasks = useCallback(() => {
-    setTasks(getTasksForDate(today));
-  }, [today]);
+    setTasks(getTasksForDate(selectedDate));
+  }, [selectedDate]);
 
   useEffect(() => {
     refreshTasks();
@@ -45,8 +71,48 @@ const Dashboard = () => {
     }
   }, [tasks, profile, score]);
 
+  // Periodic Notifications Logic
+  useEffect(() => {
+    if (!notificationsEnabled || !isPushEnabled || profile.notificationInterval === 'off') return;
+
+    const checkAndNotify = () => {
+      const now = new Date();
+      const lastNotify = localStorage.getItem('last_periodic_notification');
+      const lastTime = lastNotify ? parseInt(lastNotify) : 0;
+      
+      let shouldNotify = false;
+      const minutesSinceLast = (Date.now() - lastTime) / (1000 * 60);
+
+      if (profile.notificationInterval === '2min' && minutesSinceLast >= 2) shouldNotify = true;
+      else if (profile.notificationInterval === '5min' && minutesSinceLast >= 5) shouldNotify = true;
+      else if (profile.notificationInterval === '10min' && minutesSinceLast >= 10) shouldNotify = true;
+      else if (profile.notificationInterval === '1hour' && minutesSinceLast >= 60) shouldNotify = true;
+      else if (profile.notificationInterval === '6hour' && minutesSinceLast >= 360) shouldNotify = true;
+      else if (profile.notificationInterval === 'custom' && profile.notificationTime) {
+        const [hours, mins] = profile.notificationTime.split(':').map(Number);
+        if (now.getHours() === hours && now.getMinutes() === mins) {
+          // Only notify once per day for specific time
+          const lastDate = localStorage.getItem('last_specific_time_notification');
+          const todayStr = getToday();
+          if (lastDate !== todayStr) {
+            shouldNotify = true;
+            localStorage.setItem('last_specific_time_notification', todayStr);
+          }
+        }
+      }
+
+      if (shouldNotify) {
+        triggerRoastNotification('general');
+        localStorage.setItem('last_periodic_notification', Date.now().toString());
+      }
+    };
+
+    const intervalId = setInterval(checkAndNotify, 30000); // Check every 30 seconds
+    return () => clearInterval(intervalId);
+  }, [notificationsEnabled, profile.notificationInterval, profile.notificationTime, profile.goal, profile.targetSalary, profile.tonePreference]);
+
   const handleAddTask = (title: string) => {
-    addTask(title, today);
+    addTask(title, selectedDate);
     refreshTasks();
   };
 
@@ -61,6 +127,41 @@ const Dashboard = () => {
       saveProfile(newProfile);
     }
   };
+  
+  const handleEnableNotifications = async () => {
+    // If already granted, toggle our internal preference
+    if (Notification.permission === 'granted') {
+      const newState = !isPushEnabled;
+      setIsPushEnabled(newState);
+      localStorage.setItem('is_push_enabled', newState.toString());
+      toast({
+        title: newState ? "Notifications Enabled" : "Notifications Disabled",
+        description: newState ? "Now we can reach you anywhere. 🔥" : "You're safe... for now. 💀",
+      });
+      return;
+    }
+
+    const permission = await requestNotificationPermission();
+    if (permission === 'granted') {
+      setNotificationsEnabled(true);
+      setIsPushEnabled(true);
+      localStorage.setItem('is_push_enabled', 'true');
+      toast({
+        title: "Notifications Enabled",
+        description: "Now we can reach you anywhere. No escape. 🔥",
+      });
+    } else {
+      toast({
+        title: "Permission Denied",
+        description: "You're lucky... for now. Enable them in browser settings if you change your mind.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendTestNotification = () => {
+    triggerRoastNotification('general');
+  };
 
   const handleMiss = (id: string) => {
     updateTaskStatus(id, 'missed');
@@ -68,11 +169,32 @@ const Dashboard = () => {
     const newProfile = updateStreak(profile, false);
     setProfile(newProfile);
     saveProfile(newProfile);
+    
+    if (notificationsEnabled && isPushEnabled) {
+      triggerRoastNotification('missed');
+    }
+  };
+
+  const handleResetTask = (id: string) => {
+    updateTaskStatus(id, 'pending');
+    refreshTasks();
   };
 
   const handleDelete = (id: string) => {
     deleteTask(id);
     refreshTasks();
+  };
+
+  const handleIntervalChange = (val: string) => {
+    const newProfile = { ...profile, notificationInterval: val as any };
+    setProfile(newProfile);
+    saveProfile(newProfile);
+  };
+
+  const handleTimeChange = (time: string) => {
+    const newProfile = { ...profile, notificationTime: time };
+    setProfile(newProfile);
+    saveProfile(newProfile);
   };
 
   const handleToneChange = (tone: TonePreference) => {
@@ -81,10 +203,40 @@ const Dashboard = () => {
     saveProfile(newProfile);
   };
 
+  const handlePrevDay = () => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() - 1);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+
+  const handleNextDay = () => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() + 1);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+
   const handleOnboarding = (data: Partial<UserProfile>) => {
     const newProfile = { ...profile, ...data };
     setProfile(newProfile);
     saveProfile(newProfile);
+  };
+
+  const handleResetProfile = () => {
+    if (confirm("Are you sure? This will delete all your tasks and streak data. No going back from being a quitter! 🔥")) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
+
+  const handleUpdateGoal = () => {
+    const newProfile = { ...profile, goal: editGoal, targetSalary: editSalary };
+    setProfile(newProfile);
+    saveProfile(newProfile);
+    setIsEditingGoal(false);
+    toast({
+      title: "Goal Updated",
+      description: "We've updated your target. Now get back to work! 💀",
+    });
   };
 
   if (!profile.onboardingDone) {
@@ -110,14 +262,129 @@ const Dashboard = () => {
         {/* Settings panel */}
         {showSettings && (
           <div className="p-4 rounded-lg border border-border bg-card animate-slide-up space-y-4">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Settings</h3>
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Goal: <strong className="text-foreground">{profile.goal || 'Not set'}</strong></p>
-              <p className="text-xs text-muted-foreground">Target: <strong className="text-foreground">{profile.targetSalary || 'Not set'}</strong></p>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Settings</h3>
+              {!isEditingGoal && (
+                <Button variant="ghost" size="xs" onClick={() => setIsEditingGoal(true)} className="text-[10px] h-6 px-2">
+                  Edit Profile
+                </Button>
+              )}
             </div>
+            
+            {isEditingGoal ? (
+              <div className="space-y-3 animate-fade-in">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Main Goal</label>
+                  <Input 
+                    value={editGoal} 
+                    onChange={(e) => setEditGoal(e.target.value)}
+                    className="h-8 text-xs bg-secondary border-border"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Target Salary</label>
+                  <Input 
+                    value={editSalary} 
+                    onChange={(e) => setEditSalary(e.target.value)}
+                    className="h-8 text-xs bg-secondary border-border"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-7 text-xs flex-1" onClick={handleUpdateGoal}>Save</Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs flex-1" onClick={() => {
+                    setIsEditingGoal(false);
+                    setEditGoal(profile.goal);
+                    setEditSalary(profile.targetSalary);
+                  }}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Goal: <strong className="text-foreground">{profile.goal || 'Not set'}</strong></p>
+                <p className="text-xs text-muted-foreground">Target: <strong className="text-foreground">{profile.targetSalary || 'Not set'}</strong></p>
+              </div>
+            )}
+
             <div>
               <p className="text-xs text-muted-foreground mb-2">Roast Style</p>
               <ToneSelector current={profile.tonePreference} onChange={handleToneChange} />
+            </div>
+            <div className="pt-2 border-t border-border flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-[3] gap-2"
+                onClick={handleEnableNotifications}
+              >
+                {notificationsEnabled && isPushEnabled ? (
+                  <>
+                    <Bell className="w-4 h-4 text-green-500" />
+                    Notifications Active
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="w-4 h-4 text-roast" />
+                    {notificationsEnabled ? 'Notifications Disabled' : 'Enable Push Notifications'}
+                  </>
+                )}
+              </Button>
+              {notificationsEnabled && isPushEnabled && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1 px-0"
+                  onClick={sendTestNotification}
+                  title="Send Test Notification"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            
+            {(notificationsEnabled && isPushEnabled) && (
+              <div className="space-y-3 pt-2 border-t border-border animate-slide-up">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Clock className="w-3 h-3" />
+                  <span>Auto-Roast Schedule</span>
+                </div>
+                <Select value={profile.notificationInterval} onValueChange={handleIntervalChange}>
+                  <SelectTrigger className="w-full bg-secondary border-border text-xs h-8">
+                    <SelectValue placeholder="Select interval" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="off">Disabled</SelectItem>
+                    <SelectItem value="2min">Every 2 Minutes (Testing)</SelectItem>
+                    <SelectItem value="5min">Every 5 Minutes</SelectItem>
+                    <SelectItem value="10min">Every 10 Minutes</SelectItem>
+                    <SelectItem value="1hour">Every Hour</SelectItem>
+                    <SelectItem value="6hour">Every 6 Hours</SelectItem>
+                    <SelectItem value="custom">Specific Daily Time</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {profile.notificationInterval === 'custom' && (
+                  <div className="flex items-center gap-2 animate-slide-up">
+                    <Input 
+                      type="time" 
+                      value={profile.notificationTime} 
+                      onChange={(e) => handleTimeChange(e.target.value)}
+                      className="bg-secondary border-border h-8 text-xs"
+                    />
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">Daily Reminder</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-border">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full text-xs text-muted-foreground hover:text-roast hover:bg-roast/10"
+                onClick={handleResetProfile}
+              >
+                Reset Profile (Delete All Data)
+              </Button>
             </div>
           </div>
         )}
@@ -136,11 +403,21 @@ const Dashboard = () => {
         {/* Today's tasks */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Today's Tasks</h2>
-            <span className="text-xs text-muted-foreground">{today}</span>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tasks</h2>
+            <div className="flex items-center gap-2 bg-secondary/50 rounded-lg px-2 py-1">
+              <Button variant="ghost" size="xs" onClick={handlePrevDay} className="h-6 w-6 p-0 hover:bg-roast/10 hover:text-roast">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-xs font-bold font-mono text-foreground min-w-[85px] text-center">
+                {selectedDate === today ? 'TODAY' : selectedDate}
+              </span>
+              <Button variant="ghost" size="xs" onClick={handleNextDay} className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <AddTask onAdd={handleAddTask} />
-          <TaskList tasks={tasks} onComplete={handleComplete} onMiss={handleMiss} onDelete={handleDelete} />
+          <TaskList tasks={tasks} onComplete={handleComplete} onMiss={handleMiss} onDelete={handleDelete} onReset={handleResetTask} />
         </div>
 
         {/* Motivational footer when no tasks */}
