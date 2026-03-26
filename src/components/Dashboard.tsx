@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Flame, Settings } from 'lucide-react';
 import type { Task, UserProfile, TonePreference } from '@/types';
 import {
   getProfile, saveProfile, getTasksForDate, addTask,
   updateTaskStatus, deleteTask, getToday, calculateScore, updateStreak,
+  getActivityData,
 } from '@/lib/storage';
 import { getRoast } from '@/lib/roasts';
 import { requestNotificationPermission, triggerRoastNotification } from '@/lib/notifications';
@@ -15,6 +16,7 @@ import StreakDisplay from '@/components/StreakDisplay';
 import ScoreDisplay from '@/components/ScoreDisplay';
 import ToneSelector from '@/components/ToneSelector';
 import ShareableRoast from '@/components/ShareableRoast';
+import ActivityChart from '@/components/ActivityChart';
 import { Button } from '@/components/ui/button';
 import { Bell, BellOff, Clock, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +41,8 @@ const Dashboard = () => {
   
   const today = getToday();
   const [selectedDate, setSelectedDate] = useState(today);
+  
+  const activityData = useMemo(() => getActivityData(91), [tasks]);
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     'Notification' in window && Notification.permission === 'granted'
@@ -407,6 +411,8 @@ const Dashboard = () => {
         {roastMessage && (
           <RoastCard message={roastMessage} onShare={() => setShowShare(true)} />
         )}
+
+        <ActivityChart data={activityData} />
 
         {/* Today's tasks */}
         <div className="space-y-3">

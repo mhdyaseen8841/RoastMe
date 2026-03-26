@@ -104,3 +104,18 @@ export function updateStreak(profile: UserProfile, allCompleted: boolean): UserP
   }
   return profile;
 }
+
+export function getActivityData(days: number = 90): { date: string; count: number }[] {
+  const data: { date: string; count: number }[] = [];
+  const tasks = getTasks();
+  
+  for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const count = tasks.filter(t => t.date === dateStr && t.status === 'completed').length;
+    data.push({ date: dateStr, count });
+  }
+  
+  return data.reverse();
+}
