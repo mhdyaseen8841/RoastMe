@@ -133,7 +133,16 @@ const Dashboard = () => {
   };
   
   const handleEnableNotifications = async () => {
-    const currentPermission = 'Notification' in window ? Notification.permission : 'default';
+    if (!('Notification' in window)) {
+      toast({
+        title: "Notifications Not Supported",
+        description: "Your browser doesn't support push notifications here. Try 'Add to Home Screen' if you're on iOS! 📱",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentPermission = Notification.permission;
 
     if (currentPermission === 'granted') {
       const newState = !isPushEnabled;
@@ -149,21 +158,25 @@ const Dashboard = () => {
     if (currentPermission === 'denied') {
       toast({
         title: "Permission Denied",
-        description: "Please enable notifications in your browser settings to continue.",
+        description: "Please enable notifications in your browser settings to continue. 💀",
         variant: "destructive",
       });
       return;
     }
 
-    const permission = await requestNotificationPermission();
-    if (permission === 'granted') {
-      setNotificationsEnabled(true);
-      setIsPushEnabled(true);
-      localStorage.setItem('is_push_enabled', 'true');
-      toast({
-        title: "Notifications Enabled",
-        description: "Now we can reach you anywhere. 🔥",
-      });
+    try {
+      const permission = await requestNotificationPermission();
+      if (permission === 'granted') {
+        setNotificationsEnabled(true);
+        setIsPushEnabled(true);
+        localStorage.setItem('is_push_enabled', 'true');
+        toast({
+          title: "Notifications Enabled",
+          description: "Now we can reach you anywhere. 🔥",
+        });
+      }
+    } catch (err) {
+      console.error("Permission request failed", err);
     }
   };
 

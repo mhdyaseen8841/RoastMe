@@ -27,8 +27,7 @@ const AddTask = ({ onAdd }: AddTaskProps) => {
       />
       <Button 
         type="submit" 
-        onClick={handleSubmit}
-        className="bg-primary text-primary-foreground hover:bg-primary/80 active:scale-95 transition-transform glow-primary min-h-[44px] px-6 font-bold touch-manipulation"
+        className="bg-primary text-primary-foreground hover:bg-primary/80 active:scale-95 transition-transform glow-primary min-h-[44px] px-6 font-bold touch-manipulation cursor-pointer"
       >
         <Plus className="w-5 h-5 sm:mr-1" />
         <span className="hidden sm:inline">Add</span>
