@@ -23,10 +23,15 @@ const AddTask = ({ onAdd }: AddTaskProps) => {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Add a task... (e.g. Apply 5 jobs)"
-        className="flex-1 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+        className="flex-1 bg-secondary border-border text-foreground placeholder:text-muted-foreground min-h-[44px] text-base"
       />
-      <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/80 glow-primary">
-        <Plus className="w-4 h-4 mr-1" /> Add
+      <Button 
+        type="submit" 
+        onClick={handleSubmit}
+        className="bg-primary text-primary-foreground hover:bg-primary/80 glow-primary min-h-[44px] px-6 font-bold"
+      >
+        <Plus className="w-5 h-5 sm:mr-1" />
+        <span className="hidden sm:inline">Add</span>
       </Button>
     </form>
   );

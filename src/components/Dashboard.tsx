@@ -129,14 +129,24 @@ const Dashboard = () => {
   };
   
   const handleEnableNotifications = async () => {
-    // If already granted, toggle our internal preference
-    if (Notification.permission === 'granted') {
+    const currentPermission = 'Notification' in window ? Notification.permission : 'default';
+
+    if (currentPermission === 'granted') {
       const newState = !isPushEnabled;
       setIsPushEnabled(newState);
       localStorage.setItem('is_push_enabled', newState.toString());
       toast({
         title: newState ? "Notifications Enabled" : "Notifications Disabled",
         description: newState ? "Now we can reach you anywhere. 🔥" : "You're safe... for now. 💀",
+      });
+      return;
+    }
+
+    if (currentPermission === 'denied') {
+      toast({
+        title: "Permission Denied",
+        description: "Please enable notifications in your browser settings to continue.",
+        variant: "destructive",
       });
       return;
     }
@@ -148,13 +158,7 @@ const Dashboard = () => {
       localStorage.setItem('is_push_enabled', 'true');
       toast({
         title: "Notifications Enabled",
-        description: "Now we can reach you anywhere. No escape. 🔥",
-      });
-    } else {
-      toast({
-        title: "Permission Denied",
-        description: "You're lucky... for now. Enable them in browser settings if you change your mind.",
-        variant: "destructive",
+        description: "Now we can reach you anywhere. 🔥",
       });
     }
   };
@@ -246,13 +250,17 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border px-4 py-4">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-md px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame className="w-6 h-6 text-roast" />
             <h1 className="text-xl font-bold text-gradient-fire">Roast Me</h1>
           </div>
-          <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
+          <button 
+            onClick={() => setShowSettings(!showSettings)} 
+            className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-roast shadow-[0_0_15px_rgba(255,83,83,0.3)] text-white' : 'hover:bg-secondary text-muted-foreground'}`}
+            aria-label="Toggle Settings"
+          >
             <Settings className="w-5 h-5" />
           </button>
         </div>
