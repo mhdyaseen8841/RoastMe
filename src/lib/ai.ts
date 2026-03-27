@@ -5,7 +5,15 @@
  * For production apps, this should be handled by a secure backend.
  */
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com";
+
+const API_CONFIGS = [
+  { version: "v1beta", model: "gemini-1.5-flash" },
+  { version: "v1", model: "gemini-1.5-flash" },
+  { version: "v1beta", model: "gemini-pro" },
+  { version: "v1", model: "gemini-pro" },
+  { version: "v1beta", model: "gemini-1.5-flash-latest" },
+];
 
 export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
   const prompt = `
@@ -26,36 +34,42 @@ export async function generateAIRoast(apiKey: string, situaton: string, goal: st
     ROAST:
   `.trim();
 
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 100,
-        }
-      }),
-    });
+  let lastError = null;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || "AI Request Failed");
+  for (const config of API_CONFIGS) {
+    const url = `${GEMINI_API_BASE}/${config.version}/models/${config.model}:generateContent?key=${apiKey}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.9,
+            maxOutputTokens: 100,
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text.trim();
+      } else {
+        const errorData = await response.json();
+        console.warn(`Gemini trial (${config.model} on ${config.version}) failed:`, errorData.error?.message);
+        lastError = errorData.error?.message;
+      }
+    } catch (error: any) {
+      console.warn(`Network error for ${config.model}:`, error.message);
+      lastError = error.message;
     }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!text) throw new Error("No roast generated");
-    
-    return text.trim();
-  } catch (error) {
-    console.error("Gemini AI Error:", error);
-    throw error;
   }
+
+  throw new Error(lastError || "All AI models failed to respond. Check your internet or API key.");
 }
