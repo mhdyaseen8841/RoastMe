@@ -5,7 +5,7 @@
  * For production apps, this should be handled by a secure backend.
  */
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
 
 export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
   const prompt = `
