@@ -8,51 +8,15 @@
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com";
 
 const API_CONFIGS = [
+  { version: "v1beta", model: "gemini-pro" },
   { version: "v1beta", model: "gemini-1.5-flash" },
   { version: "v1", model: "gemini-1.5-flash" },
-  { version: "v1beta", model: "gemini-pro" },
   { version: "v1", model: "gemini-pro" },
   { version: "v1beta", model: "gemini-1.5-flash-latest" },
-  { version: "v1", model: "gemini-1.0-pro" },
   { version: "v1beta", model: "gemini-1.0-pro" },
 ];
 
-export async function testAI(apiKey: string): Promise<string> {
-  const url = `${GEMINI_API_BASE}/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: "Say 'Success'" }] }]
-    })
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || "Test failed");
-  }
-  return "AI connection successful!";
-}
-
-export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
-  const prompt = `
-    You are a professional "Roast Master" productivity coach.
-    Your goal is to roast the user into being more productive based on their current situation.
-    
-    USER GOAL: ${goal}
-    USER TONE PREFERENCE: ${tone} (savage, funny, or sarcastic)
-    CURRENT SITUATION: ${situaton}
-    
-    RULES:
-    1. Be concise (max 2 sentences).
-    2. Be funny but motivating in a ${tone} way.
-    3. Refer to their specific goal to make it personal.
-    4. Do not be overly mean; stay in the realm of "tough love".
-    5. No emojis except for occasional fire or skull.
-    
-    ROAST:
-  `.trim();
-
+async function callGemini(apiKey: string, prompt: string): Promise<string> {
   let lastError = null;
 
   for (const config of API_CONFIGS) {
@@ -61,13 +25,9 @@ export async function generateAIRoast(apiKey: string, situaton: string, goal: st
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
+          contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.9,
             maxOutputTokens: 100,
@@ -89,6 +49,36 @@ export async function generateAIRoast(apiKey: string, situaton: string, goal: st
       lastError = error.message;
     }
   }
+  throw new Error(lastError || "All AI models failed to respond. Check your API key and permissions.");
+}
 
-  throw new Error(lastError || "All AI models failed to respond. Check your internet or API key.");
+export async function testAI(apiKey: string): Promise<string> {
+  try {
+    const result = await callGemini(apiKey, "Say 'Success' if you can read this.");
+    return `AI Connection Successful! (${result})`;
+  } catch (err: any) {
+    throw new Error(err.message);
+  }
+}
+
+export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
+  const prompt = `
+    You are a professional "Roast Master" productivity coach.
+    Your goal is to roast the user into being more productive based on their current situation.
+    
+    USER GOAL: ${goal}
+    USER TONE PREFERENCE: ${tone} (savage, funny, or sarcastic)
+    CURRENT SITUATION: ${situaton}
+    
+    RULES:
+    1. Be concise (max 2 sentences).
+    2. Be funny but motivating in a ${tone} way.
+    3. Refer to their specific goal to make it personal.
+    4. Do not be overly mean; stay in the realm of "tough love".
+    5. No emojis except for occasional fire or skull.
+    
+    ROAST:
+  `.trim();
+
+  return await callGemini(apiKey, prompt);
 }
