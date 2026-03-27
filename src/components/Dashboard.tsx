@@ -6,7 +6,7 @@ import {
   updateTaskStatus, deleteTask, getToday, calculateScore, updateStreak,
   getActivityData,
 } from '@/lib/storage';
-import { getDynamicRoast } from '@/lib/roasts';
+import { getDynamicRoast, testAI } from '@/lib/roasts';
 import { requestNotificationPermission, triggerRoastNotification } from '@/lib/notifications';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [editGoal, setEditGoal] = useState(profile.goal);
   const [editSalary, setEditSalary] = useState(profile.targetSalary);
+  const [isTestingAI, setIsTestingAI] = useState(false);
   
   const today = getToday();
   const [selectedDate, setSelectedDate] = useState(today);
@@ -264,6 +265,34 @@ const Dashboard = () => {
     saveProfile(newProfile);
   };
 
+  const handleTestAI = async () => {
+    if (!profile.aiApiKey) {
+      toast({
+        title: "Key Missing",
+        description: "Please enter an API Key first. 💀",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingAI(true);
+    try {
+      const result = await testAI(profile.aiApiKey);
+      toast({
+        title: "AI Success!",
+        description: result,
+      });
+    } catch (error: any) {
+      toast({
+        title: "AI Connection Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingAI(false);
+    }
+  };
+
   const handleOnboarding = (data: Partial<UserProfile>) => {
     const newProfile = { ...profile, ...data };
     setProfile(newProfile);
@@ -412,14 +441,25 @@ const Dashboard = () => {
               <div className="space-y-2 pt-2 border-t border-border animate-slide-up">
                 <div className="flex items-center justify-between">
                   <Label className="text-[10px] uppercase font-bold text-muted-foreground">Gemini API Key</Label>
-                  <a 
-                    href="https://aistudio.google.com/app/apikey" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="text-[10px] text-roast hover:underline flex items-center gap-1"
-                  >
-                    <Info className="w-3 h-3" /> Get Key
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleTestAI} 
+                      disabled={isTestingAI}
+                      className="text-[10px] h-6 px-2 hover:text-roast hover:bg-roast/10"
+                    >
+                      {isTestingAI ? 'Testing...' : 'Test Connection'}
+                    </Button>
+                    <a 
+                      href="https://aistudio.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-[10px] text-roast hover:underline flex items-center gap-1"
+                    >
+                      <Info className="w-3 h-3" /> Get Key
+                    </a>
+                  </div>
                 </div>
                 <Input 
                   type="password"

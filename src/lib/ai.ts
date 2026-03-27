@@ -13,7 +13,26 @@ const API_CONFIGS = [
   { version: "v1beta", model: "gemini-pro" },
   { version: "v1", model: "gemini-pro" },
   { version: "v1beta", model: "gemini-1.5-flash-latest" },
+  { version: "v1", model: "gemini-1.0-pro" },
+  { version: "v1beta", model: "gemini-1.0-pro" },
 ];
+
+export async function testAI(apiKey: string): Promise<string> {
+  const url = `${GEMINI_API_BASE}/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: "Say 'Success'" }] }]
+    })
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || "Test failed");
+  }
+  return "AI connection successful!";
+}
 
 export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
   const prompt = `

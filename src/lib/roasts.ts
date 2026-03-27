@@ -1,5 +1,6 @@
 import type { TonePreference, UserProfile } from '@/types';
-import { generateAIRoast } from './ai';
+import { generateAIRoast, testAI } from './ai';
+export { testAI };
 
 interface RoastTemplate {
   message: string;
