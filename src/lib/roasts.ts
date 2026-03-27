@@ -116,9 +116,10 @@ export async function getDynamicRoast(
 ): Promise<string> {
   const situation = `User has ${category} their productivity goals.`;
   
-  if (profile.aiEnabled) {
+  if (profile.aiEnabled && profile.aiApiKey) {
     try {
       return await generateAIRoast(
+        profile.aiApiKey,
         situation,
         profile.goal,
         profile.tonePreference

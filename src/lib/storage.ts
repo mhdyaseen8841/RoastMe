@@ -16,6 +16,7 @@ const defaultProfile: UserProfile = {
   notificationInterval: 'off',
   notificationTime: '09:00',
   aiEnabled: false,
+  aiApiKey: '',
 };
 
 export function getProfile(): UserProfile {

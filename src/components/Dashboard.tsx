@@ -250,12 +250,18 @@ const Dashboard = () => {
     const newProfile = { ...profile, aiEnabled: enabled };
     setProfile(newProfile);
     saveProfile(newProfile);
-    if (enabled) {
+    if (enabled && !profile.aiApiKey) {
       toast({
-        title: "AI Activated!",
-        description: "Gemini is now roasting your life in real-time. 🔥",
+        title: "AI Enabled!",
+        description: "Now enter your Gemini API Key below to start getting dynamic roasts. 🔥",
       });
     }
+  };
+
+  const handleAIApiKeyChange = (key: string) => {
+    const newProfile = { ...profile, aiApiKey: key };
+    setProfile(newProfile);
+    saveProfile(newProfile);
   };
 
   const handleOnboarding = (data: Partial<UserProfile>) => {
@@ -312,7 +318,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Settings</h3>
               {!isEditingGoal && (
-                <Button variant="ghost" size="xs" onClick={() => setIsEditingGoal(true)} className="text-[10px] h-6 px-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingGoal(true)} className="text-[10px] h-6 px-2">
                   Edit Profile
                 </Button>
               )}
@@ -401,6 +407,30 @@ const Dashboard = () => {
                 onCheckedChange={handleAIEnabledChange}
               />
             </div>
+
+            {profile.aiEnabled && (
+              <div className="space-y-2 pt-2 border-t border-border animate-slide-up">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Gemini API Key</Label>
+                  <a 
+                    href="https://aistudio.google.com/app/apikey" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-[10px] text-roast hover:underline flex items-center gap-1"
+                  >
+                    <Info className="w-3 h-3" /> Get Key
+                  </a>
+                </div>
+                <Input 
+                  type="password"
+                  placeholder="Enter your API Key..."
+                  value={profile.aiApiKey || ''}
+                  onChange={(e) => handleAIApiKeyChange(e.target.value)}
+                  className="h-8 text-xs bg-secondary border-border"
+                />
+                <p className="text-[9px] text-muted-foreground">Your key is kept safe in your local browser storage.</p>
+              </div>
+            )}
             
             {(notificationsEnabled && isPushEnabled) && (
               <div className="space-y-3 pt-2 border-t border-border animate-slide-up">
@@ -468,13 +498,13 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tasks</h2>
             <div className="flex items-center gap-2 bg-secondary/50 rounded-lg px-2 py-1">
-              <Button variant="ghost" size="xs" onClick={handlePrevDay} className="h-6 w-6 p-0 hover:bg-roast/10 hover:text-roast active:scale-95 touch-manipulation">
+              <Button variant="ghost" size="sm" onClick={handlePrevDay} className="h-6 w-6 p-0 hover:bg-roast/10 hover:text-roast active:scale-95 touch-manipulation">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-xs font-bold font-mono text-foreground min-w-[85px] text-center">
                 {selectedDate === today ? 'TODAY' : selectedDate}
               </span>
-              <Button variant="ghost" size="xs" onClick={handleNextDay} className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success active:scale-95 touch-manipulation">
+              <Button variant="ghost" size="sm" onClick={handleNextDay} className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success active:scale-95 touch-manipulation">
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>

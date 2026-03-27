@@ -5,10 +5,9 @@
  * For production apps, this should be handled by a secure backend.
  */
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-const GEMINI_API_KEY = "AIzaSyDT5jbYV6G6perzxEu-63sDbYUmAZ6pwzk";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
 
-export async function generateAIRoast(situaton: string, goal: string, tone: string): Promise<string> {
+export async function generateAIRoast(apiKey: string, situaton: string, goal: string, tone: string): Promise<string> {
   const prompt = `
     You are a professional "Roast Master" productivity coach.
     Your goal is to roast the user into being more productive based on their current situation.
@@ -28,7 +27,7 @@ export async function generateAIRoast(situaton: string, goal: string, tone: stri
   `.trim();
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
