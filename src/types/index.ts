@@ -19,6 +19,7 @@ export interface UserProfile {
   onboardingDone: boolean;
   notificationInterval?: 'off' | '2min' | '5min' | '10min' | '1hour' | '6hour' | 'custom';
   notificationTime?: string; // HH:mm
+  aiEnabled?: boolean;
 }
 
 export interface RoastLog {

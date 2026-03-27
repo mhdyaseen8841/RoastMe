@@ -1,4 +1,5 @@
-import type { TonePreference } from '@/types';
+import type { TonePreference, UserProfile } from '@/types';
+import { generateAIRoast } from './ai';
 
 interface RoastTemplate {
   message: string;
@@ -107,4 +108,25 @@ export function getScoreComment(score: number): string {
   if (score >= 50) return "Mediocre. Just like yesterday.";
   if (score >= 30) return "Embarrassing. Do better.";
   return "Pathetic. Your future is buffering.";
+}
+
+export async function getDynamicRoast(
+  profile: UserProfile,
+  category: RoastTemplate['category']
+): Promise<string> {
+  const situation = `User has ${category} their productivity goals.`;
+  
+  if (profile.aiEnabled) {
+    try {
+      return await generateAIRoast(
+        situation,
+        profile.goal,
+        profile.tonePreference
+      );
+    } catch (error) {
+      console.error("AI Roast failed, falling back to hardcoded:", error);
+    }
+  }
+
+  return getRoast(profile.tonePreference, category, profile.goal, profile.targetSalary);
 }

@@ -15,6 +15,7 @@ const defaultProfile: UserProfile = {
   onboardingDone: false,
   notificationInterval: 'off',
   notificationTime: '09:00',
+  aiEnabled: false,
 };
 
 export function getProfile(): UserProfile {

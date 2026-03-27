@@ -6,8 +6,11 @@ import {
   updateTaskStatus, deleteTask, getToday, calculateScore, updateStreak,
   getActivityData,
 } from '@/lib/storage';
-import { getRoast } from '@/lib/roasts';
+import { getDynamicRoast } from '@/lib/roasts';
 import { requestNotificationPermission, triggerRoastNotification } from '@/lib/notifications';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Sparkles, Brain, Info } from 'lucide-react';
 import GoalSetup from '@/components/GoalSetup';
 import AddTask from '@/components/AddTask';
 import TaskList from '@/components/TaskList';
@@ -65,14 +68,21 @@ const Dashboard = () => {
 
   // Generate roast when tasks change
   useEffect(() => {
-    const missed = tasks.filter(t => t.status === 'missed').length;
-    if (missed > 0) {
-      setRoastMessage(getRoast(profile.tonePreference, 'missed', profile.goal, profile.targetSalary));
-    } else if (score < 50 && tasks.length > 0) {
-      setRoastMessage(getRoast(profile.tonePreference, 'low_score', profile.goal, profile.targetSalary));
-    } else if (tasks.length > 0 && tasks.every(t => t.status === 'completed')) {
-      setRoastMessage('');
-    }
+    const updateRoast = async () => {
+      const missed = tasks.filter(t => t.status === 'missed').length;
+      if (missed > 0) {
+        const msg = await getDynamicRoast(profile, 'missed');
+        setRoastMessage(msg);
+      } else if (score < 50 && tasks.length > 0) {
+        const msg = await getDynamicRoast(profile, 'low_score');
+        setRoastMessage(msg);
+      } else if (tasks.length > 0 && tasks.every(t => t.status === 'completed')) {
+        setRoastMessage('');
+      } else if (tasks.length === 0) {
+        setRoastMessage('');
+      }
+    };
+    updateRoast();
   }, [tasks, profile, score]);
 
   // Periodic Notifications Logic
@@ -236,6 +246,18 @@ const Dashboard = () => {
     setSelectedDate(date.toISOString().split('T')[0]);
   };
 
+  const handleAIEnabledChange = (enabled: boolean) => {
+    const newProfile = { ...profile, aiEnabled: enabled };
+    setProfile(newProfile);
+    saveProfile(newProfile);
+    if (enabled) {
+      toast({
+        title: "AI Activated!",
+        description: "Gemini is now roasting your life in real-time. 🔥",
+      });
+    }
+  };
+
   const handleOnboarding = (data: Partial<UserProfile>) => {
     const newProfile = { ...profile, ...data };
     setProfile(newProfile);
@@ -364,6 +386,20 @@ const Dashboard = () => {
                   <Send className="w-4 h-4" />
                 </Button>
               )}
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-t border-border mt-2">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1.5">
+                  <Brain className="w-4 h-4 text-roast" />
+                  AI Dynamic Roasts
+                </Label>
+                <p className="text-[10px] text-muted-foreground italic">Unlock personalized motivation</p>
+              </div>
+              <Switch 
+                checked={profile.aiEnabled} 
+                onCheckedChange={handleAIEnabledChange}
+              />
             </div>
             
             {(notificationsEnabled && isPushEnabled) && (
